@@ -29,7 +29,6 @@
             android:layout_height="wrap_content"
             android:hint="@string/device_s_mac_address"
             android:id="@+id/devicemac"/>
-
         <Button
             android:id="@+id/BtnSearchDevice"
             android:layout_width="wrap_content"

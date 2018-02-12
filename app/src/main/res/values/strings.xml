@@ -14,4 +14,5 @@
     <string name="menu_disconnect">Disconnect</string>
     <string name="menu_scan">Scan</string>
     <string name="menu_stop">Stop</string>
+    <string name="select_device">Select device</string>
 </resources>
