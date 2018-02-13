@@ -17,6 +17,7 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.util.ArrayList;
@@ -77,6 +78,14 @@ public class SearchDevicesActivity extends AppCompatActivity {
         ListView listview = (ListView) findViewById(R.id.list);
         listview.setAdapter(mLeDeviceListAdapter);
         scanLeDevice(true);
+
+        Button rescanBtn = (Button) findViewById(R.id.rescan_btn);
+        rescanBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                scanLeDevice(true);
+            }
+        });
     }
 
     @Override
@@ -104,16 +113,30 @@ public class SearchDevicesActivity extends AppCompatActivity {
                 public void run() {
                     mScanning = false;
                     mBluetoothAdapter.stopLeScan(mLeScanCallback);
-                    invalidateOptionsMenu();
+                    displayProgressBarAndRescanButton(false);
                 }
             }, SCAN_PERIOD);
             mScanning = true;
             mBluetoothAdapter.startLeScan(mLeScanCallback);
+            displayProgressBarAndRescanButton(true);
         } else {
             mScanning = false;
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            displayProgressBarAndRescanButton(false);
         }
         invalidateOptionsMenu();
+    }
+
+    private void displayProgressBarAndRescanButton(final boolean enable) {
+        ProgressBar progressbar = (ProgressBar) findViewById(R.id.loading_progress_bar);
+        Button rescanBtn = (Button) findViewById(R.id.rescan_btn);
+        if(enable) {
+            progressbar.setVisibility(View.VISIBLE);
+            rescanBtn.setVisibility(View.GONE);
+        } else {
+            progressbar.setVisibility(View.GONE);
+            rescanBtn.setVisibility(View.VISIBLE);
+        }
     }
 
     // Adapter for holding devices found through scanning.
