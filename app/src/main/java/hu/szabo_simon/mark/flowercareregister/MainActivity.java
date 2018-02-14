@@ -2,24 +2,53 @@ package hu.szabo_simon.mark.flowercareregister;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     final int REQUEST_CODE = 1;
+    OkHttpClient client = new OkHttpClient();
+    TextView logmessages;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Button buttonOne = (Button) findViewById(R.id.BtnSearchDevice);
-        buttonOne.setOnClickListener(new Button.OnClickListener() {
+        Button BtnSearchDevice = (Button) findViewById(R.id.BtnSearchDevice);
+        BtnSearchDevice.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View view) {
                 Intent i = new Intent(view.getContext(), SearchDevicesActivity.class);
                 startActivityForResult(i, REQUEST_CODE);
+            }
+        });
+
+        Button BtnRegister = (Button) findViewById(R.id.btn_register_device);
+        logmessages = (TextView) findViewById(R.id.log_messages);
+
+        BtnRegister.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                logmessages.setText("");
+
+                OkHttpHandler okHttpHandler= new OkHttpHandler();
+                okHttpHandler.execute();
+
             }
         });
     }
@@ -37,5 +66,109 @@ public class MainActivity extends AppCompatActivity {
                 //Write your code if there's no result
             }
         }
-    }//onActivityResult
+    }
+
+    public class OkHttpHandler extends AsyncTask {
+
+        OkHttpClient client = new OkHttpClient();
+
+        @Override
+        protected String doInBackground(Object[] params) {
+            boolean ChineseProxySet = false;
+            do {
+                client = new OkHttpClient();
+                //Get proxy
+                Proxy proxy = getChineseProxy();
+                publishProgress("Chinese proxy aquired: " + proxy.toString());
+
+                //Set proxy
+                OkHttpClient.Builder builder = new OkHttpClient.Builder().proxy(proxy);
+                client = builder.build();
+
+                //Test proxy
+                JSONObject resp = getJSON("http://www.ip-api.com/json");
+                if(resp == null) {
+                    publishProgress("Could not set Chinese proxy, retrying...");
+                } else {
+                    String countryCode = "";
+                    String proxyip = "";
+                    String location = "";
+                    try {
+                        countryCode = resp.getString("countryCode");
+                        proxyip = resp.getString("query");
+                        location = resp.getString("city") + ", " + resp.getString("regionName") + ", " + resp.getString("country");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                    if (countryCode.equals("CN")) {
+                        ChineseProxySet = true;
+                        publishProgress("Chinese proxy properly set, our IP is now " + proxyip + " in " + location);
+                    } else if(location != "") {
+                        publishProgress("The proxy is not in China but in " + location + " retrying...");
+                    } else {
+                        publishProgress("Could not set Chinese proxy, retrying...");
+                    }
+                }
+            }while(!ChineseProxySet); //TODO add limit/timeout
+
+            //Login
+
+            //Register device
+            return "";
+        }
+
+        @Override
+        protected void onProgressUpdate(Object... s) {
+            logmessages.append(s[0].toString() + "\n");
+        }
+
+        @Override
+        protected void onPostExecute(Object s) {
+            super.onPostExecute(s);
+            logmessages.append("PostExecute");
+        }
+
+        private Proxy getChineseProxy() {
+            Proxy p = null;
+            while(p == null) {//TODO add limit/timeout
+                String url = "https://gimmeproxy.com/api/getProxy?country=CN&protocol=http";
+                JSONObject json = getJSON(url);
+                String hostname;
+                Integer port;
+                try {
+                    hostname = json.getString("ip");
+                    port = Integer.parseInt(json.getString("port"));
+                    p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(hostname, port));
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (NullPointerException e) {
+                    e.printStackTrace();
+                }
+            }
+            return p;
+        }
+
+        private String getUrl(String url) {
+            Request.Builder builder = new Request.Builder();
+            builder.url(url);
+            Request request = builder.build();
+            String resp = "";
+            try {
+                Response response = client.newCall(request).execute();
+                resp = response.body().string();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            return resp;
+        }
+
+        private JSONObject getJSON(String url) {
+            try {
+                return new JSONObject(getUrl(url));
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+    }
 }

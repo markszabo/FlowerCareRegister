@@ -1,7 +1,6 @@
 package hu.szabo_simon.mark.flowercareregister;
 
 import android.app.Activity;
-import android.app.ListActivity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
@@ -20,6 +19,7 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import java.util.ArrayList;
 
 public class SearchDevicesActivity extends AppCompatActivity {
@@ -36,6 +36,7 @@ public class SearchDevicesActivity extends AppCompatActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_search_devices);
+
         mHandler = new Handler();
 
         // Use this check to determine whether BLE is supported on the device.  Then you can

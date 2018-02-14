@@ -15,4 +15,5 @@
     <string name="menu_scan">Scan</string>
     <string name="menu_stop">Stop</string>
     <string name="select_device">Select device</string>
+    <string name="title_activity_main2">Main2Activity</string>
 </resources>
