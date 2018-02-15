@@ -17,12 +17,16 @@ import org.json.JSONObject;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 
+import okhttp3.FormBody;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     final int REQUEST_CODE = 1;
+    final int MAX_RETRY = 5;
     OkHttpClient client = new OkHttpClient();
     TextView logmessages;
 
@@ -74,44 +78,75 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(Object[] params) {
-            boolean ChineseProxySet = false;
+            boolean loginSuccessful = false;
             do {
-                client = new OkHttpClient();
-                //Get proxy
-                Proxy proxy = getChineseProxy();
-                publishProgress("Chinese proxy aquired: " + proxy.toString());
+                boolean ChineseProxySet = false;
+                do {
+                    client = new OkHttpClient();
+                    //Get proxy
+                    Proxy proxy = getChineseProxy();
+                    publishProgress("Chinese proxy aquired: " + proxy.toString());
 
-                //Set proxy
-                OkHttpClient.Builder builder = new OkHttpClient.Builder().proxy(proxy);
-                client = builder.build();
+                    //Set proxy
+                    OkHttpClient.Builder builder = new OkHttpClient.Builder().proxy(proxy);
+                    client = builder.build();
 
-                //Test proxy
-                JSONObject resp = getJSON("http://www.ip-api.com/json");
-                if(resp == null) {
-                    publishProgress("Could not set Chinese proxy, retrying...");
-                } else {
-                    String countryCode = "";
-                    String proxyip = "";
-                    String location = "";
-                    try {
-                        countryCode = resp.getString("countryCode");
-                        proxyip = resp.getString("query");
-                        location = resp.getString("city") + ", " + resp.getString("regionName") + ", " + resp.getString("country");
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-                    if (countryCode.equals("CN")) {
-                        ChineseProxySet = true;
-                        publishProgress("Chinese proxy properly set, our IP is now " + proxyip + " in " + location);
-                    } else if(location != "") {
-                        publishProgress("The proxy is not in China but in " + location + " retrying...");
-                    } else {
+                    //Test proxy
+                    JSONObject resp = getJSON("http://www.ip-api.com/json");
+                    if (resp == null) {
                         publishProgress("Could not set Chinese proxy, retrying...");
+                    } else {
+                        String countryCode = "";
+                        String proxyip = "";
+                        String location = "";
+                        try {
+                            countryCode = resp.getString("countryCode");
+                            proxyip = resp.getString("query");
+                            location = resp.getString("city") + ", " + resp.getString("regionName") + ", " + resp.getString("country");
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                        if (countryCode.equals("CN")) {
+                            ChineseProxySet = true;
+                            publishProgress("Chinese proxy properly set, our IP is now " + proxyip + " in " + location);
+                        } else if (location != "") {
+                            publishProgress("The proxy is not in China but in " + location + " retrying...");
+                        } else {
+                            publishProgress("Could not set Chinese proxy, retrying...");
+                        }
                     }
-                }
-            }while(!ChineseProxySet); //TODO add limit/timeout
+                } while (!ChineseProxySet); //TODO add limit/timeout
 
-            //Login
+                //Login
+                EditText usernameET = findViewById(R.id.username);
+                EditText passwordET = findViewById(R.id.password);
+                String username = usernameET.getText().toString();
+                String password = passwordET.getText().toString();
+
+                String loginJson = "{\"method\":\"GET\",\"path\":\"/v2/token/email\",\"data\":{\"extra\":{\"app_channel\":\"google\",\"country\":\"US\",\"zone\":1,\"lang\":\"en\",\"version\":\"ASI_3021_4.3.0\",\"phone\":\"Xiaomi_2014813_22\",\"position\":[null,null],\"model\":\"\"},\"password\":" + JSONObject.quote(password) + ",\"email\":" + JSONObject.quote(username) + "},\"service\":\"auth\"}";
+                Log.d("loginJson", loginJson);
+
+                MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+                RequestBody loginBody = RequestBody.create(JSON, loginJson);
+
+                JSONObject loginResults = getJSON("https://api.huahuacaocao.net/api", loginBody);
+                String status = "";
+                String description = "";
+                try {
+                    status = loginResults.getString("status");
+                    description = loginResults.getString("description");
+                    loginSuccessful = true;
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (NullPointerException e) {
+                    e.printStackTrace();
+                }
+            if(!status.equals("100")) {
+                publishProgress("Login failed: " + description + ". Please double check your username and password");
+                return "";
+            }
+            }while(!loginSuccessful);
+            publishProgress("Login successful");
 
             //Register device
             return "";
@@ -148,23 +183,34 @@ public class MainActivity extends AppCompatActivity {
             return p;
         }
 
-        private String getUrl(String url) {
+        private String getUrl(String url, RequestBody postBody) {
             Request.Builder builder = new Request.Builder();
             builder.url(url);
+            if(postBody != null)
+                builder.post(postBody);
             Request request = builder.build();
             String resp = "";
-            try {
-                Response response = client.newCall(request).execute();
-                resp = response.body().string();
-            }catch (Exception e){
-                e.printStackTrace();
-            }
+            boolean success = false;
+            int retries = 0;
+            while (!success && retries <= MAX_RETRY) {
+                retries++;
+                try {
+                    Response response = client.newCall(request).execute();
+                    resp = response.body().string();
+                    success = true;
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            } //TODO handle if still unsuccessful after MAX_RETRY
             return resp;
         }
 
         private JSONObject getJSON(String url) {
+            return getJSON(url, null);
+        }
+        private JSONObject getJSON(String url, RequestBody postBody) {
             try {
-                return new JSONObject(getUrl(url));
+                return new JSONObject(getUrl(url, postBody));
             } catch (JSONException e) {
                 e.printStackTrace();
                 return null;
