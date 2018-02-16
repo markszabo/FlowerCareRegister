@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
                     client = new OkHttpClient();
                     //Get proxy
                     Proxy proxy = getChineseProxy();
-                    publishProgress("Chinese proxy aquired: " + proxy.toString());
+                    publishProgress("Chinese proxy acquired: " + proxy.toString());
 
                     //Set proxy
                     OkHttpClient.Builder builder = new OkHttpClient.Builder().proxy(proxy);
