@@ -9,13 +9,17 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.net.Socket;
+import java.net.SocketAddress;
 
 import okhttp3.FormBody;
 import okhttp3.MediaType;
@@ -26,7 +30,7 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
     final int REQUEST_CODE = 1;
-    final int MAX_RETRY = 5;
+    final int MAX_RETRY = 3;
     OkHttpClient client = new OkHttpClient();
     TextView logmessages;
 
@@ -34,6 +38,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        this.findViewById(android.R.id.content).setKeepScreenOn(true); //prevent from going to sleep while app is running
+
+        displayProgressBarAndRegisterButton(false);
+
         Button BtnSearchDevice = (Button) findViewById(R.id.BtnSearchDevice);
         BtnSearchDevice.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View view) {
@@ -48,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
         BtnRegister.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                displayProgressBarAndRegisterButton(true);
                 logmessages.setText("");
 
                 OkHttpHandler okHttpHandler= new OkHttpHandler();
@@ -78,6 +87,14 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(Object[] params) {
+            //Check the internet connection
+            if(!isOnline()) {
+                publishProgress("No Internet connection is available. Please connect to wifi or mobile data.");
+                return "";
+            }
+
+            String x_auth_token = "";
+
             boolean loginSuccessful = false;
             do {
                 boolean ChineseProxySet = false;
@@ -108,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         if (countryCode.equals("CN")) {
                             ChineseProxySet = true;
-                            publishProgress("Chinese proxy properly set, our IP is now " + proxyip + " in " + location);
+                            publishProgress("Chinese proxy set, our IP is now " + proxyip + " in " + location);
                         } else if (location != "") {
                             publishProgress("The proxy is not in China but in " + location + " retrying...");
                         } else {
@@ -124,7 +141,6 @@ public class MainActivity extends AppCompatActivity {
                 String password = passwordET.getText().toString();
 
                 String loginJson = "{\"method\":\"GET\",\"path\":\"/v2/token/email\",\"data\":{\"extra\":{\"app_channel\":\"google\",\"country\":\"US\",\"zone\":1,\"lang\":\"en\",\"version\":\"ASI_3021_4.3.0\",\"phone\":\"Xiaomi_2014813_22\",\"position\":[null,null],\"model\":\"\"},\"password\":" + JSONObject.quote(password) + ",\"email\":" + JSONObject.quote(username) + "},\"service\":\"auth\"}";
-                Log.d("loginJson", loginJson);
 
                 MediaType JSON = MediaType.parse("application/json; charset=utf-8");
                 RequestBody loginBody = RequestBody.create(JSON, loginJson);
@@ -135,20 +151,50 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     status = loginResults.getString("status");
                     description = loginResults.getString("description");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                } catch (NullPointerException e) {
+                    e.printStackTrace();
+                }
+                if(!status.equals("") && !status.equals("100")) {
+                    publishProgress("Login failed: " + description + ". Please double check your username and password");
+                    return "";
+                }
+                try {
+                    x_auth_token = loginResults.getJSONObject("data").getString("token");
                     loginSuccessful = true;
                 } catch (JSONException e) {
                     e.printStackTrace();
                 } catch (NullPointerException e) {
                     e.printStackTrace();
                 }
-            if(!status.equals("100")) {
-                publishProgress("Login failed: " + description + ". Please double check your username and password");
-                return "";
-            }
             }while(!loginSuccessful);
             publishProgress("Login successful");
 
             //Register device
+            EditText MACaddressET = findViewById(R.id.devicemac);
+            String deviceMAC = MACaddressET.getText().toString();
+            String deviceRegJson = "{\"method\":\"POST\",\"path\":" + JSONObject.quote("/v2/device/" + deviceMAC) + ",\"data\":{\"extra\":{\"app_channel\":\"google\",\"country\":\"US\",\"zone\":1,\"lang\":\"en\",\"version\":\"\",\"phone\":\"\",\"position\":[null,null],\"model\":\"hhcc.plantmonitor.v1\"},\"sn\":\"\",\"name\":\"Flower care\",\"battery\":100,\"model\":\"hhcc.plantmonitor.v1\"},\"service\":\"ble\"}";
+            MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+            RequestBody deviceRegBody = RequestBody.create(JSON, deviceRegJson);
+
+            JSONObject deviceRegResults = getJSON("https://api.huahuacaocao.net/api", deviceRegBody, x_auth_token);
+            String status = "";
+            String description = "";
+            try {
+                status = deviceRegResults.getString("status");
+                description = deviceRegResults.getString("description");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            } catch (NullPointerException e) {
+                e.printStackTrace();
+            }
+            if(status.equals("100")) {
+                publishProgress("Device successfully added");
+            } else {
+                publishProgress("Error while adding device: " + description);
+                publishProgress("Please try again");
+            }
             return "";
         }
 
@@ -160,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Object s) {
             super.onPostExecute(s);
-            logmessages.append("PostExecute");
+            displayProgressBarAndRegisterButton(false);
         }
 
         private Proxy getChineseProxy() {
@@ -183,11 +229,14 @@ public class MainActivity extends AppCompatActivity {
             return p;
         }
 
-        private String getUrl(String url, RequestBody postBody) {
+        private String getUrl(String url, RequestBody postBody, String x_auth_token) {
             Request.Builder builder = new Request.Builder();
             builder.url(url);
             if(postBody != null)
                 builder.post(postBody);
+            if(x_auth_token != null)
+                builder.addHeader("x-auth-token", x_auth_token);
+
             Request request = builder.build();
             String resp = "";
             boolean success = false;
@@ -206,15 +255,43 @@ public class MainActivity extends AppCompatActivity {
         }
 
         private JSONObject getJSON(String url) {
-            return getJSON(url, null);
+            return getJSON(url, null, null);
         }
         private JSONObject getJSON(String url, RequestBody postBody) {
+            return getJSON(url, postBody, null);
+        }
+        private JSONObject getJSON(String url, RequestBody postBody, String x_auth_token) {
             try {
-                return new JSONObject(getUrl(url, postBody));
+                return new JSONObject(getUrl(url, postBody, x_auth_token));
             } catch (JSONException e) {
                 e.printStackTrace();
                 return null;
             }
         }
+
+        public boolean isOnline() { //from: https://stackoverflow.com/a/27312494/8590802
+            try {
+                int timeoutMs = 1500;
+                Socket sock = new Socket();
+                SocketAddress sockaddr = new InetSocketAddress("8.8.8.8", 53);
+
+                sock.connect(sockaddr, timeoutMs);
+                sock.close();
+
+                return true;
+            } catch (IOException e) { return false; }
+        }
+    }
+    private void displayProgressBarAndRegisterButton(final boolean enable) {
+        ProgressBar progressbar = (ProgressBar) findViewById(R.id.registering_progress_bar);
+        Button registerBtn = (Button) findViewById(R.id.btn_register_device);
+        if(enable) {
+            progressbar.setVisibility(View.VISIBLE);
+            registerBtn.setVisibility(View.GONE);
+        } else {
+            progressbar.setVisibility(View.GONE);
+            registerBtn.setVisibility(View.VISIBLE);
+        }
     }
 }
+
