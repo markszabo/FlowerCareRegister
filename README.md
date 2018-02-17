@@ -20,4 +20,8 @@ This app can help you if you are faced with this error:
 
 ## Permissions
 
-TODO
+* Bluetooth ("android.permission.BLUETOOTH", "android.permission.BLUETOOTH_ADMIN"): used to scan for Bluetooth devices
+* Internet ("android.permission.INTERNET"): used to get the proxy data and contact the [huahuacaocao servers](https://api.huahuacaocao.net/api)
+
+On Android 6.0 and above:
+* Location ("android.permission.ACCESS_COARSE_LOCATION"): this permission is required to scan for Bluetooth devices, as described [here](https://stackoverflow.com/a/37015725/8590802) ([Official docs](https://developer.android.com/reference/android/bluetooth/le/BluetoothLeScanner.html#startScan(java.util.List<android.bluetooth.le.ScanFilter>,%20android.bluetooth.le.ScanSettings,%20android.app.PendingIntent))). The app does not access the location directly.
