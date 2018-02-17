@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        this.findViewById(android.R.id.content).setKeepScreenOn(true); //prevent from going to sleep while app is running
+        this.findViewById(android.R.id.content).setKeepScreenOn(true); // prevent from going to sleep while app is running
 
         displayProgressBarAndRegisterButton(false);
 
