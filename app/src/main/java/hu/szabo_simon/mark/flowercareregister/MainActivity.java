@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -21,7 +20,6 @@ import java.net.Proxy;
 import java.net.Socket;
 import java.net.SocketAddress;
 
-import okhttp3.FormBody;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -42,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
 
         displayProgressBarAndRegisterButton(false);
 
-        Button BtnSearchDevice = (Button) findViewById(R.id.BtnSearchDevice);
+        Button BtnSearchDevice = findViewById(R.id.BtnSearchDevice);
         BtnSearchDevice.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View view) {
                 Intent i = new Intent(view.getContext(), SearchDevicesActivity.class);
@@ -50,8 +48,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Button BtnRegister = (Button) findViewById(R.id.btn_register_device);
-        logmessages = (TextView) findViewById(R.id.log_messages);
+        Button BtnRegister = findViewById(R.id.btn_register_device);
+        logmessages = findViewById(R.id.log_messages);
 
         BtnRegister.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -72,25 +70,34 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_CODE) {
             if(resultCode == Activity.RESULT_OK){
                 String selected_address=data.getStringExtra("mac_address");
-                EditText devicemac = (EditText) findViewById(R.id.devicemac);
+                EditText devicemac = findViewById(R.id.devicemac);
                 devicemac.setText(selected_address);
-            }
-            if (resultCode == Activity.RESULT_CANCELED) {
-                //Write your code if there's no result
             }
         }
     }
 
-    public class OkHttpHandler extends AsyncTask {
+    private void displayProgressBarAndRegisterButton(final boolean enable) {
+        ProgressBar progressbar = findViewById(R.id.registering_progress_bar);
+        Button registerBtn = findViewById(R.id.btn_register_device);
+        if (enable) {
+            progressbar.setVisibility(View.VISIBLE);
+            registerBtn.setVisibility(View.GONE);
+        } else {
+            progressbar.setVisibility(View.GONE);
+            registerBtn.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private class OkHttpHandler extends AsyncTask<Void, String, Void> {
 
         OkHttpClient client = new OkHttpClient();
 
         @Override
-        protected String doInBackground(Object[] params) {
+        protected Void doInBackground(Void... voids) {
             //Check the internet connection
             if(!isOnline()) {
                 publishProgress("No Internet connection is available. Please connect to wifi or mobile data.");
-                return "";
+                return null;
             }
 
             String x_auth_token = "";
@@ -104,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
                     Proxy proxy = getChineseProxy();
                     if(proxy == null) {
                         publishProgress("Failed to get Chinese proxy. Please try again.");
-                        return "";
+                        return null;
                     }
                     publishProgress("Chinese proxy acquired: " + proxy.toString());
 
@@ -139,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if(!ChineseProxySet) {
                     publishProgress("Failed to set Chinese proxy, try again later.");
-                    return "";
+                    return null;
                 }
 
                 //Login
@@ -166,7 +173,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 if(!status.equals("") && !status.equals("100")) {
                     publishProgress("Login failed: " + description + ". Please double check your username and password");
-                    return "";
+                    return null;
                 }
                 try {
                     x_auth_token = loginResults.getJSONObject("data").getString("token");
@@ -191,9 +198,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 status = deviceRegResults.getString("status");
                 description = deviceRegResults.getString("description");
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (NullPointerException e) {
+            } catch (JSONException | NullPointerException e) {
                 e.printStackTrace();
             }
             if(status.equals("100")) {
@@ -202,17 +207,17 @@ public class MainActivity extends AppCompatActivity {
                 publishProgress("Error while adding device: " + description);
                 publishProgress("Please try again");
             }
-            return "";
+            return null;
         }
 
         @Override
-        protected void onProgressUpdate(Object... s) {
-            logmessages.append(s[0].toString() + "\n");
+        protected void onProgressUpdate(String... s) {
+            logmessages.append(s[0] + "\n");
         }
 
         @Override
-        protected void onPostExecute(Object s) {
-            super.onPostExecute(s);
+        protected void onPostExecute(Void v) {
+            super.onPostExecute(v);
             displayProgressBarAndRegisterButton(false);
         }
 
@@ -227,9 +232,7 @@ public class MainActivity extends AppCompatActivity {
                     hostname = json.getString("ip");
                     port = Integer.parseInt(json.getString("port"));
                     p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(hostname, port));
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                } catch (NullPointerException e) {
+                } catch (JSONException | NullPointerException e) {
                     e.printStackTrace();
                 }
             }
@@ -254,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
                     Response response = client.newCall(request).execute();
                     resp = response.body().string();
                     success = true;
-                }catch (Exception e){
+                } catch (IOException | NullPointerException e) {
                     e.printStackTrace();
                 }
             }
@@ -276,7 +279,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        public boolean isOnline() { //from: https://stackoverflow.com/a/27312494/8590802
+        private boolean isOnline() { //from: https://stackoverflow.com/a/27312494/8590802
             try {
                 int timeoutMs = 1500;
                 Socket sock = new Socket();
@@ -287,17 +290,6 @@ public class MainActivity extends AppCompatActivity {
 
                 return true;
             } catch (IOException e) { return false; }
-        }
-    }
-    private void displayProgressBarAndRegisterButton(final boolean enable) {
-        ProgressBar progressbar = (ProgressBar) findViewById(R.id.registering_progress_bar);
-        Button registerBtn = (Button) findViewById(R.id.btn_register_device);
-        if(enable) {
-            progressbar.setVisibility(View.VISIBLE);
-            registerBtn.setVisibility(View.GONE);
-        } else {
-            progressbar.setVisibility(View.GONE);
-            registerBtn.setVisibility(View.VISIBLE);
         }
     }
 }
