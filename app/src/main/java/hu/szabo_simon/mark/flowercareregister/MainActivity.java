@@ -96,12 +96,16 @@ public class MainActivity extends AppCompatActivity {
             String x_auth_token = "";
 
             boolean loginSuccessful = false;
-            do {
+            for(int i=0; i<MAX_RETRY && !loginSuccessful; i++) {
                 boolean ChineseProxySet = false;
-                do {
+                for(int j=0; j<MAX_RETRY && !ChineseProxySet; j++) {
                     client = new OkHttpClient();
                     //Get proxy
                     Proxy proxy = getChineseProxy();
+                    if(proxy == null) {
+                        publishProgress("Failed to get Chinese proxy. Please try again.");
+                        return "";
+                    }
                     publishProgress("Chinese proxy acquired: " + proxy.toString());
 
                     //Set proxy
@@ -126,13 +130,17 @@ public class MainActivity extends AppCompatActivity {
                         if (countryCode.equals("CN")) {
                             ChineseProxySet = true;
                             publishProgress("Chinese proxy set, our IP is now " + proxyip + " in " + location);
-                        } else if (location != "") {
+                        } else if (!location.equals("")) {
                             publishProgress("The proxy is not in China but in " + location + " retrying...");
                         } else {
                             publishProgress("Could not set Chinese proxy, retrying...");
                         }
                     }
-                } while (!ChineseProxySet); //TODO add limit/timeout
+                }
+                if(!ChineseProxySet) {
+                    publishProgress("Failed to set Chinese proxy, try again later.");
+                    return "";
+                }
 
                 //Login
                 EditText usernameET = findViewById(R.id.username);
@@ -151,10 +159,10 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     status = loginResults.getString("status");
                     description = loginResults.getString("description");
-                } catch (JSONException e) {
+                } catch (JSONException | NullPointerException e) {
+                    publishProgress("Failed to login, probably due to bad proxy. Retrying...");
                     e.printStackTrace();
-                } catch (NullPointerException e) {
-                    e.printStackTrace();
+                    continue;
                 }
                 if(!status.equals("") && !status.equals("100")) {
                     publishProgress("Login failed: " + description + ". Please double check your username and password");
@@ -163,12 +171,11 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     x_auth_token = loginResults.getJSONObject("data").getString("token");
                     loginSuccessful = true;
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                } catch (NullPointerException e) {
+                } catch (JSONException | NullPointerException e) {
+                    publishProgress("Failed to get x-auth-token, probably due to bad proxy. Retrying...");
                     e.printStackTrace();
                 }
-            }while(!loginSuccessful);
+            }
             publishProgress("Login successful");
 
             //Register device
@@ -211,7 +218,7 @@ public class MainActivity extends AppCompatActivity {
 
         private Proxy getChineseProxy() {
             Proxy p = null;
-            while(p == null) {//TODO add limit/timeout
+            for(int i=0; p == null && i < MAX_RETRY; i++) {
                 String url = "https://gimmeproxy.com/api/getProxy?country=CN&protocol=http";
                 JSONObject json = getJSON(url);
                 String hostname;
@@ -250,7 +257,7 @@ public class MainActivity extends AppCompatActivity {
                 }catch (Exception e){
                     e.printStackTrace();
                 }
-            } //TODO handle if still unsuccessful after MAX_RETRY
+            }
             return resp;
         }
 
