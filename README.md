@@ -4,7 +4,12 @@ Android app to register the Chinese versions of the Flower Care Smart Monitor (a
 
 ![Picture of the device from the manufacturer's site](http://img.site.huahuacaocao.net/production/production_17.jpg)
 
-## Flow of the program
+This app can help you if you are faced with this error:
+
+![Flower Care error](/screenshots/official_app_error1.png?raw=true)
+![Flower Care error](/screenshots/official_app_error2.png?raw=true)
+
+## The flow of the program
 
 1. Enter the Flower Care username and password (used to sign in to the official application).
 2. Search for nearby bluetooth devices
