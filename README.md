@@ -6,8 +6,7 @@ Android app to register the Chinese versions of the Flower Care Smart Monitor (a
 
 This app can help you if you are faced with this error:
 
-![Flower Care error](/screenshots/official_app_error1.png?raw=true | width=200)
-![Flower Care error](/screenshots/official_app_error2.png?raw=true | width=200)
+<img src="/screenshots/official_app_error1.png?raw=true" width="45%"/> <img src="/screenshots/official_app_error2.png?raw=true" width="45%"/>
 
 ## The flow of the program
 
