@@ -183,6 +183,10 @@ public class MainActivity extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
+            if(!loginSuccessful) {
+                publishProgress("Failed to login, try again later.");
+                return null;
+            }
             publishProgress("Login successful");
 
             //Register device
