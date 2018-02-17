@@ -8,6 +8,10 @@ This app can help you if you are faced with this error:
 
 <img src="/screenshots/official_app_error1.png?raw=true" width="45%"/> <img src="/screenshots/official_app_error2.png?raw=true" width="45%"/>
 
+The background of this error is the fact, that the manufacturer (huahuacaocao) produces the Flower Monitor in two versions, one for the domestic, Chinese market and one for the International market. However numerous online shops (aliexpress, dx.com etc.) sell the Chinese version worldwide, but if one tries to register it from outside China the app shows the above error message. The location of the user is checked based on their IP, so fake GPS alone is not enough, one needs to use Chinese proxy or VPN to have a Chinese IP. However the location is only checked when the device is added. Once it's added it can be used everywhere. So this application helps you add the device to your account, so that you can use it with the official "Flower Care" app.
+
+Fun fact: the main difference between the Chinese and the International version is that their MAC address is from a different range. The Chinese versions starts with C4:7C:8D while the International version starts with 88:0F:10.
+
 ## The flow of the program
 
 1. Enter the Flower Care username and password (used to sign in to the official application).
