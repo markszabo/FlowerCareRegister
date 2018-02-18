@@ -1,3 +1,5 @@
+<a href='https://play.google.com/store/apps/details?id=hu.szabo_simon.mark.flowercareregister&utm_source=github&utm_campaign=github&pcampaignid=MKT-Other-global-all-co-prtnr-py-PartBadge-Mar2515-1'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png' width='300px'/></a>
+
 # Flower Care Register
 
 Android app to register the Chinese versions of the Flower Care Smart Monitor (aka Xiaomi Flower Monitor Tool) outside China.
@@ -29,3 +31,6 @@ Fun fact: the main difference between the Chinese and the International version 
 
 On Android 6.0 and above:
 * Location ("android.permission.ACCESS_COARSE_LOCATION"): this permission is required to scan for Bluetooth devices, as described [here](https://stackoverflow.com/a/37015725/8590802) ([Official docs](https://developer.android.com/reference/android/bluetooth/le/BluetoothLeScanner.html#startScan(java.util.List<android.bluetooth.le.ScanFilter>,%20android.bluetooth.le.ScanSettings,%20android.app.PendingIntent))). The app does not access the location directly.
+
+---------------
+Google Play and the Google Play logo are trademarks of Google LLC.
